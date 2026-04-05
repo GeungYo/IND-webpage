@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>공간미리 | AI 기반 실내 공간 스캔 및 가구 재배치 시뮬레이션</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #07111f;
+      color: #ffffff;
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: none;
+    }
+
+    .container {
+      width: min(1200px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(7, 17, 31, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+      gap: 20px;
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: #9eb0c7;
+    }
+
+    .nav {
+      display: flex;
+      gap: 24px;
+      color: #d9e6f3;
+      font-size: 15px;
+    }
+
+    .nav a:hover {
+      color: #7de3ff;
+    }
+
+    .hero {
+      padding: 80px 0 50px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(95, 222, 255, 0.12);
+      color: #9aeaff;
+      border: 1px solid rgba(95, 222, 255, 0.25);
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .hero p {
+      margin: 24px 0 0;
+      font-size: 18px;
+      color: #d0dceb;
+      max-width: 620px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 30px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 14px 22px;
+      border-radius: 16px;
+      font-weight: 700;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #ffffff;
+      color: #07111f;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .panel-glow {
+      position: relative;
+    }
+
+    .panel-glow::before {
+      content: "";
+      position: absolute;
+      inset: -10px;
+      background: radial-gradient(circle, rgba(0, 221, 255, 0.18), transparent 65%);
+      filter: blur(18px);
+      z-index: 0;
+    }
+
+    .dashboard {
+      position: relative;
+      z-index: 1;
+      border-radius: 28px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .dashboard-inner {
+      border-radius: 24px;
+      padding: 18px;
+      background: #0d1727;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dashboard-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .dashboard-top small {
+      color: #9cb1c9;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .dashboard-top h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .status {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(94, 255, 161, 0.12);
+      color: #94f5b7;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .preview-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .preview-card .label {
+      font-size: 14px;
+      color: #9cb1c9;
+      margin-bottom: 10px;
+    }
+
+    .preview-box {
+      height: 180px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      font-size: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .preview-box.original {
+      background: linear-gradient(135deg, #28384f, #101726);
+      color: #d9e6f3;
+    }
+
+    .preview-box.result {
+      background: linear-gradient(135deg, #06384a, #101726);
+      color: #baf5ff;
+    }
+
+    .section {
+      padding: 30px 0 20px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      color: #9aeaff;
+      margin-bottom: 8px;
+    }
+
+    .section h2 {
+      margin: 0 0 22px;
+      font-size: 36px;
+      line-height: 1.3;
+    }
+
+    .cards-2,
+    .cards-3,
+    .demo-grid,
+    .value-grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .cards-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .cards-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .demo-grid {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    .value-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+    }
+
+    .card,
+    .highlight-card,
+    .upload-card,
+    .steps-card,
+    .value-card {
+      border-radius: 28px;
+      padding: 28px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .highlight-card {
+      background: rgba(95, 222, 255, 0.10);
+      border-color: rgba(95, 222, 255, 0.20);
+    }
+
+    .card small,
+    .highlight-card small {
+      display: block;
+      color: #9aeaff;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .card h3,
+    .highlight-card h3,
+    .upload-card h3,
+    .steps-card h3 {
+      margin: 0 0 14px;
+      font-size: 28px;
+      line-height: 1.35;
+    }
+
+    .card p,
+    .highlight-card p,
+    .feature-card p,
+    .upload-card p,
+    .value-card p {
+      margin: 0;
+      color: #d4ddea;
+    }
+
+    .dropzone {
+      margin-top: 18px;
+      border: 2px dashed rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 48px 24px;
+      text-align: center;
+      background: rgba(8, 18, 32, 0.6);
+    }
+
+    .dropzone .icon {
+      font-size: 52px;
+      margin-bottom: 10px;
+    }
+
+    .dropzone-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .dropzone-sub {
+      color: #9cb1c9;
+      margin-bottom: 18px;
+    }
+
+    .fake-file {
+      margin-top: 14px;
+      font-size: 14px;
+      color: #9aeaff;
+      min-height: 22px;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: rgba(8, 18, 32, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .step-number {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: #7de3ff;
+      color: #07111f;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .feature-card {
+      border-radius: 28px;
+      padding: 28px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: 0.2s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      font-size: 42px;
+      margin-bottom: 18px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+
+    .value-card {
+      background: linear-gradient(135deg, rgba(95, 222, 255, 0.10), rgba(255, 255, 255, 0.04));
+      border-color: rgba(95, 222, 255, 0.18);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-box {
+      border-radius: 22px;
+      padding: 22px;
+      background: rgba(8, 18, 32, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-box strong {
+      display: block;
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 50px;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 24px 0;
+      color: #9cb1c9;
+      font-size: 14px;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .cards-2,
+      .cards-3,
+      .demo-grid,
+      .preview-grid,
+      .value-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 42px;
+      }
+
+      .nav {
+        display: none;
+      }
+
+      .section h2 {
+        font-size: 30px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero {
+        padding-top: 56px;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      .card h3,
+      .highlight-card h3,
+      .upload-card h3,
+      .steps-card h3 {
+        font-size: 24px;
+      }
+
+      .container {
+        width: min(1200px, calc(100% - 24px));
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div>
+        <div class="brand-title">공간미리</div>
+        <div class="brand-sub">AI 기반 실내 공간 스캔 및 가구 재배치 시뮬레이션</div>
+      </div>
+      <nav class="nav">
+        <a href="#about">서비스 소개</a>
+        <a href="#demo">플랫폼 데모</a>
+        <a href="#features">핵심 기능</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="badge">실제 공간을 미리 보고 바꿔보는 서비스</div>
+          <h1>휴대폰으로 스캔한 방을<br />가상으로 편집해보세요</h1>
+          <p>
+            공간미리는 실제 실내 공간을 디지털화한 뒤 구조물과 가구를 자동으로 분리하고,
+            비워진 공간의 모습과 가구 재배치 결과를 한눈에 확인할 수 있도록 돕는 플랫폼입니다.
+          </p>
+          <div class="hero-actions">
+            <button class="btn-primary" onclick="scrollToSection('demo')">지금 시작하기</button>
+            <button class="btn-secondary" onclick="scrollToSection('features')">기능 살펴보기</button>
+          </div>
+        </div>
+
+        <div class="panel-glow">
+          <div class="dashboard">
+            <div class="dashboard-inner">
+              <div class="dashboard-top">
+                <div>
+                  <small>실시간 분석 미리보기</small>
+                  <h3>Room Scan Dashboard</h3>
+                </div>
+                <div class="status" id="analysisStatus">분석 준비 완료</div>
+              </div>
+
+              <div class="preview-grid">
+                <div class="preview-card">
+                  <div class="label">원본 공간</div>
+                  <div class="preview-box original" id="originalPreview">
+                    가구가 포함된 실내 스캔 화면
+                  </div>
+                </div>
+                <div class="preview-card">
+                  <div class="label">시뮬레이션 결과</div>
+                  <div class="preview-box result" id="resultPreview">
+                    비워진 공간 확인 또는<br />가구 재배치 결과 미리보기
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <div class="container cards-2">
+        <div class="card">
+          <small>문제</small>
+          <h3>현재 보이는 방 모습만으로는 공간의 가능성을 알기 어렵습니다</h3>
+          <p>
+            방을 구하거나 인테리어를 바꾸려 할 때, 기존 가구와 물건이 놓인 상태 때문에
+            공간의 실제 넓이와 비워졌을 때의 느낌을 직관적으로 파악하기 어렵습니다.
+          </p>
+        </div>
+        <div class="highlight-card">
+          <small>해결</small>
+          <h3>실제 공간을 스캔해 구조를 분석하고 변화된 모습을 미리 보여줍니다</h3>
+          <p>
+            사용자는 휴대폰으로 공간을 촬영한 뒤 결과를 업로드하고,
+            시스템은 구조물과 가구를 자동으로 구분해 비워진 공간과 재배치된 결과를 시각적으로 제공합니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo">
+      <div class="container">
+        <div class="section-title">플랫폼 데모</div>
+        <h2>웹사이트에서 바로 이어지는 사용자 흐름</h2>
+
+        <div class="demo-grid">
+          <div class="upload-card">
+            <h3>공간 업로드</h3>
+            <p>스캔 데이터 또는 이미지를 업로드해 공간 분석을 시작하는 화면입니다.</p>
+
+            <div class="dropzone">
+              <div class="icon">⬆️</div>
+              <div class="dropzone-title">실내 스캔 파일 업로드</div>
+              <div class="dropzone-sub">3D 데이터, 이미지 또는 스캔 결과를 업로드해 공간 분석을 시작합니다.</div>
+              <input type="file" id="fileInput" hidden />
+              <button class="btn-primary" onclick="document.getElementById('fileInput').click()">파일 선택</button>
+              <div class="fake-file" id="fileName">아직 선택된 파일이 없습니다.</div>
+            </div>
+          </div>
+
+          <div class="steps-card">
+            <h3>서비스 이용 단계</h3>
+            <div class="step-list">
+              <div class="step-item">
+                <div class="step-number">1</div>
+                <div>휴대폰으로 실내 공간 촬영</div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">2</div>
+                <div>스캔 데이터 업로드</div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">3</div>
+                <div>AI 기반 공간 분석</div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">4</div>
+                <div>비워진 공간 및 재배치 결과 확인</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-title">핵심 기능</div>
+        <h2>현재 서비스에 담아야 하는 주요 기능</h2>
+
+        <div class="cards-3">
+          <div class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h3>실내 공간 스캔 업로드</h3>
+            <p>사용자가 휴대폰으로 촬영한 실내 데이터를 업로드하고 바로 분석을 시작할 수 있습니다.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🧩</div>
+            <h3>구조물·가구 자동 분리</h3>
+            <p>벽, 바닥, 천장과 가구를 구분하여 공간의 원래 형태를 더 직관적으로 확인할 수 있습니다.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🛋️</div>
+            <h3>가구 재배치 시뮬레이션</h3>
+            <p>현재 배치된 가구를 제거하거나 새로운 위치로 옮긴 결과를 가상으로 미리 볼 수 있습니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container value-card">
+        <div class="value-grid">
+          <div>
+            <div class="section-title">서비스 가치</div>
+            <h2>비워진 방의 모습과 새로운 배치 결과를 한 번에</h2>
+            <p>
+              공간미리는 인테리어 계획, 이사 전 가구 배치 검토, 부동산 매물 확인 과정에서
+              사용자가 더 빠르고 직관적으로 의사결정을 내릴 수 있도록 돕습니다.
+            </p>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <strong>3D</strong>
+              <span>실내 공간 디지털화</span>
+            </div>
+            <div class="stat-box">
+              <strong>AI</strong>
+              <span>구조물·가구 자동 분리</span>
+            </div>
+            <div class="stat-box">
+              <strong>Preview</strong>
+              <span>비워진 공간 미리보기</span>
+            </div>
+            <div class="stat-box">
+              <strong>Sim</strong>
+              <span>재배치 시뮬레이션</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <strong style="display:block; color:#ffffff; margin-bottom:4px;">공간미리</strong>
+        <span>AI 기반 실내 공간 스캔 및 가구 재배치 시뮬레이션 서비스</span>
+      </div>
+      <div>Single HTML Prototype</div>
+    </div>
+  </footer>
+
+  <script>
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const analysisStatus = document.getElementById('analysisStatus');
+    const originalPreview = document.getElementById('originalPreview');
+    const resultPreview = document.getElementById('resultPreview');
+
+    fileInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      fileName.textContent = '선택된 파일: ' + file.name;
+      analysisStatus.textContent = '분석 중';
+      originalPreview.textContent = '업로드된 스캔 데이터: ' + file.name;
+      resultPreview.innerHTML = '구조물과 가구를 분리해<br />비워진 공간 / 재배치 결과 생성 예정';
+
+      setTimeout(function () {
+        analysisStatus.textContent = '분석 완료';
+        resultPreview.innerHTML = '비워진 공간 미리보기 완료<br />가구 재배치 결과 확인 가능';
+      }, 1200);
+    });
+  </script>
+</body>
+</html>
